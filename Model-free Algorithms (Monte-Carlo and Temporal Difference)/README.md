@@ -1,1 +1,2 @@
-Hello
+# Objective:
+In this project, we implemented two model-free reinforcement learning algorithms. The first algorithm is Monte Carlo (MC), which includes both the first-visit on-policy MC prediction and on-policy MC control for the game of [blackjack](https://gymnasium.farama.org/environments/toy_text/blackjack/). The second algorithm is Temporal-Difference (TD), featuring Sarsa (on-policy) and Q-Learning (off-policy) applied to the [cliff walking](https://gymnasium.farama.org/environments/toy_text/cliff_walking/) problem.
