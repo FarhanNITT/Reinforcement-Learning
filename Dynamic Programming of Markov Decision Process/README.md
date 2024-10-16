@@ -4,3 +4,6 @@ This project focuses on the implementation of fundamental reinforcement learning
 2) The player moves under a deterministic policy with slippery nature of the environment set to False.
 
 More details about the project environement can be found here: [Frozen Lake](https://gymnasium.farama.org/environments/toy_text/frozen_lake/)
+
+
+The file mdp_dp_test.py serves as a test suite for assessing the algorithms. To run the evaluation, execute the command nosetests -v mdp_dp_test.py in the terminal. Make sure that both mdp_dp.py and mdp_dp_test.py are located in the same directory.
