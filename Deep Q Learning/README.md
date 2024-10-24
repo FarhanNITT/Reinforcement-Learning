@@ -1,1 +1,1 @@
-*** Implementation of Deep Q Learning Algorithms in the Atari Breakout Environment
+***Implementation of Deep Q Learning Algorithms in the Atari Breakout Environment*** 
