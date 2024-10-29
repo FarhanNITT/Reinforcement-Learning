@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-SBATCH --mail-user=sviswasam@wpi.edu
-SBATCH --mail-type=ALL
+#SBATCH --mail-user=sviswasam@wpi.edu
+#SBATCH --mail-type=ALL
 
 #SBATCH -A cs525
 #SBATCH -p academic
@@ -12,8 +12,8 @@ SBATCH --mail-type=ALL
 #SBATCH --mem 12G
 #SBATCH --job-name="P3"
 
-SBATCH --output=/home/sviswasam/rl/logs/logs.out
-SBATCH --error=/home/sviswasam/rl/logs/err.err
+#SBATCH --output=/home/sviswasam/rl/logs/logs.out
+#SBATCH --error=/home/sviswasam/rl/logs/err.err
 
 source activate myenv
 python main.py --train_dqn

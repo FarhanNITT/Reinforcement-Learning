@@ -10,6 +10,7 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 from itertools import count
+import wandb
 
 from agent import Agent
 from dqn_model import DQN
@@ -21,6 +22,7 @@ torch.manual_seed(595)
 np.random.seed(595)
 random.seed(595)
 
+wandb.init(project='rltest', name='dqn-learning-curve')
 
 class Agent_DQN(Agent):
     def __init__(self, env, args):
@@ -59,6 +61,7 @@ class Agent_DQN(Agent):
         self.epsilon = self.eps_start 
         self.lr = 0.001
         self.tau = 0.005
+        self.eps_decay_start = 100 #Eps after which epsilon decay starts
 
         # self.target_update = 10  # Target network update frequency (how frequently to change the target network weights)
         
@@ -106,7 +109,7 @@ class Agent_DQN(Agent):
         pass
     
     
-    def make_action(self, observation, test=True):
+    def make_action(self, observation, eps_no, test=True):
         """
         Return predicted action of your agent
         Input:
@@ -123,8 +126,12 @@ class Agent_DQN(Agent):
         
         
         # Epsilon-greedy action selection
-        self.epsilon = self.eps_end + (self.epsilon - self.eps_end) * np.exp(-1. * self.steps_done / self.eps_decay)
-        self.steps_done += 1
+        if eps_no > self.eps_decay_start:
+
+            self.epsilon = self.eps_end + (self.epsilon - self.eps_end) * np.exp(-1. * self.steps_done / self.eps_decay)
+            self.steps_done += 1
+        else:
+            self.steps_done += 1
 
         if random.random() > self.epsilon:
             with torch.no_grad():
@@ -176,7 +183,7 @@ class Agent_DQN(Agent):
         
     def optimize_model(self):
 
-        if len(self.memory) < 9000:
+        if len(self.memory) < 500:
             return
         
         transitions = self.replay_buffer()
@@ -236,18 +243,20 @@ class Agent_DQN(Agent):
         if torch.cuda.is_available() or torch.backends.mps.is_available():
             self.num_episodes = 500
         else:
-            self.num_episodes = 10000
+            self.num_episodes = 500
 
         self.episode_durations = []
+        self.episode_rewards = []
         for i_episode in range(self.num_episodes):
         
             state = self.env.reset()  # Initialize the environment and get its state
             #state = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0).permute(0,3,1,2)
+            total_reward = 0
 
             #print(state.shape)
             for t in count():
                 #print(f"Episode number: {t}")
-                action = self.make_action(state)
+                action = self.make_action(state,i_episode)
                 #state = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0).permute(0,3,1,2)
                 observation, reward, terminated, truncated, _ = self.env.step(action)
                 done = terminated or truncated
@@ -279,12 +288,22 @@ class Agent_DQN(Agent):
                 
                 self.target_net.load_state_dict(target_net_state_dict)
 
+                total_reward += reward
+
                 if done:
                     self.episode_durations.append(t + 1)
                     # plot_durations()
                     break
 
                 torch.save(policy_net_state_dict, 'double_dqn_model.pth')
+            
+            self.episode_rewards.append(total_reward)
+
+            if len(self.episode_rewards) >= 30:
+                avg_reward = np.mean(self.episode_rewards[-30:])
+                wandb.log({'average_reward': avg_reward, 'episode': i_episode, 'epsilon': self.epsilon})
+
+        wandb.finish() 
 
         
         ###########################
