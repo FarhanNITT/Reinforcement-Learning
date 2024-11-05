@@ -1,0 +1,35 @@
+{
+  "os": "Windows-10-10.0.22631-SP0",
+  "python": "3.11.0",
+  "startedAt": "2024-10-29T01:37:19.240748Z",
+  "args": [
+    "--train_dqn"
+  ],
+  "program": "C:\\Users\\vshit\\Desktop\\Reinforcement-Learning\\Deep_Q_Learning\\main.py",
+  "codePath": "Deep_Q_Learning\\main.py",
+  "git": {
+    "remote": "https://github.com/FarhanNITT/Reinforcement-Learning.git",
+    "commit": "df340e4c00e0aa7432b2d1fea4bed86b8236bb36"
+  },
+  "email": "vshitesh17@gmail.com",
+  "root": "C:\\Users\\vshit\\Desktop\\Reinforcement-Learning\\Deep_Q_Learning",
+  "host": "IdeaPad",
+  "username": "hitesh",
+  "executable": "C:\\Users\\vshit\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+  "codePathLocal": "main.py",
+  "cpu_count": 8,
+  "cpu_count_logical": 16,
+  "disk": {
+    "/": {
+      "total": "509722226688",
+      "used": "506993750016"
+    }
+  },
+  "memory": {
+    "total": "14877265920"
+  },
+  "cpu": {
+    "count": 8,
+    "countLogical": 16
+  }
+}

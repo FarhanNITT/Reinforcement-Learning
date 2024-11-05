@@ -1,0 +1,18 @@
+Traceback (most recent call last):
+  File "C:\Users\vshit\Desktop\Reinforcement-Learning\Deep_Q_Learning\main.py", line 47, in <module>
+    run(args, record_video=args.record_video)
+  File "C:\Users\vshit\Desktop\Reinforcement-Learning\Deep_Q_Learning\main.py", line 35, in run
+    agent.train()
+  File "C:\Users\vshit\Desktop\Reinforcement-Learning\Deep_Q_Learning\agent_dqn.py", line 291, in train
+    episode_loss = episode_loss + loss #Collects loss for the entire episode
+                   ~~~~~~~~~~~~~^~~~~~
+TypeError: unsupported operand type(s) for +: 'int' and 'NoneType'
+Traceback (most recent call last):
+  File "C:\Users\vshit\Desktop\Reinforcement-Learning\Deep_Q_Learning\main.py", line 47, in <module>
+    run(args, record_video=args.record_video)
+  File "C:\Users\vshit\Desktop\Reinforcement-Learning\Deep_Q_Learning\main.py", line 35, in run
+    agent.train()
+  File "C:\Users\vshit\Desktop\Reinforcement-Learning\Deep_Q_Learning\agent_dqn.py", line 291, in train
+    episode_loss = episode_loss + loss #Collects loss for the entire episode
+                   ~~~~~~~~~~~~~^~~~~~
+TypeError: unsupported operand type(s) for +: 'int' and 'NoneType'

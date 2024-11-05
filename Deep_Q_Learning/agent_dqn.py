@@ -22,7 +22,7 @@ torch.manual_seed(595)
 np.random.seed(595)
 random.seed(595)
 
-wandb.init(project='rltest', name='dqn-learning-curve')
+wandb.init(project='DeepRL', name='DQN lr changed')
 
 class Agent_DQN(Agent):
     def __init__(self, env, args):
@@ -57,11 +57,11 @@ class Agent_DQN(Agent):
         self.gamma = 0.99  # Discount factor
         self.eps_start = 1.0  # Initial epsilon for epsilon-greedy
         self.eps_end = 0.1  # Final epsilon
-        self.eps_decay = 1e-10  # Epsilon decay rate
+        self.eps_decay = 50000000  # Epsilon decay rate (step_size/this value is decay rate)
         self.epsilon = self.eps_start 
         self.lr = 0.001
-        self.tau = 0.005
-        self.eps_decay_start = 100 #Eps after which epsilon decay starts
+        self.tau = 0.0005
+        self.eps_decay_start = 300000 #Eps after which epsilon decay starts
 
         # self.target_update = 10  # Target network update frequency (how frequently to change the target network weights)
         
@@ -71,8 +71,8 @@ class Agent_DQN(Agent):
         self.policy_net = DQN(self.in_channels, self.num_actions).to(self.device)  # action selection
         self.target_net = DQN(self.in_channels, self.num_actions).to(self.device)   # calculating target Q values
         
-        self.target_net.load_state_dict(self.policy_net.state_dict())   # initializing both networks with same weights
-        self.target_net.eval()   # set target network to evalaution mode as we dont update its weights
+        #self.target_net.load_state_dict(self.policy_net.state_dict())   # We want both to have different random weights at first,but for stability no
+        #self.target_net.eval()   # In Double DQN, we update both the networks, so we dont want any network set to eval. (Set to eval = no update)
 
 
         # Replay buffer
@@ -128,7 +128,7 @@ class Agent_DQN(Agent):
         # Epsilon-greedy action selection
         if eps_no > self.eps_decay_start:
 
-            self.epsilon = self.eps_end + (self.epsilon - self.eps_end) * np.exp(-1. * self.steps_done / self.eps_decay)
+            self.epsilon = max(self.eps_end,self.epsilon-(self.epsilon-self.eps_end)/self.eps_decay)
             self.steps_done += 1
         else:
             self.steps_done += 1
@@ -167,9 +167,16 @@ class Agent_DQN(Agent):
         ###########################
         # YOUR IMPLEMENTATION HERE #
         
-        transitions = random.sample(self.memory, self.batch_size)
+        #transitions = random.sample(self.memory, self.batch_size) #(This was sampling a certain transition but it still stays in the buffer)
+
         #batch_state, batch_action, batch_next_state, batch_reward,batch_done = zip(*transitions)
 
+        if len(self.memory) < self.batch_size:
+            return []  # Not enough transitions to sample
+
+        transitions = []
+        for _ in range(self.batch_size):
+            transitions.append(self.memory.popleft())  # Pop the leftmost transition
 
         """ batch_state = torch.tensor(batch_state, dtype=torch.float32).to(self.device)"""
         # batch_action = torch.tensor(batch_action).unsqueeze(1).to(self.device)
@@ -183,7 +190,7 @@ class Agent_DQN(Agent):
         
     def optimize_model(self):
 
-        if len(self.memory) < 500:
+        if len(self.memory) < 5000:
             return
         
         transitions = self.replay_buffer()
@@ -212,12 +219,12 @@ class Agent_DQN(Agent):
         reward_batch = torch.cat(batch.reward)
 
         #state_batch = state_batch.float()  
-        state_action_values = self.policy_net(state_batch).gather(1, action_batch)
+        state_action_values = self.target_net(state_batch).gather(1, action_batch) #target net does the value updates
         
 
         next_state_values = torch.zeros(self.batch_size, device=self.device)
         with torch.no_grad():
-            next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1).values
+            next_state_values[non_final_mask] = self.policy_net(non_final_next_states).max(1).values #Policy net selects actions
 
         # Compute the expected Q values
         expected_state_action_values = (next_state_values * self.gamma) + reward_batch
@@ -230,8 +237,10 @@ class Agent_DQN(Agent):
         # Optimize the model
         self.optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
+        torch.nn.utils.clip_grad_value_(self.target_net.parameters(), 100)
         self.optimizer.step()
+
+        #return loss.item()
 
     def train(self):
         """
@@ -241,9 +250,9 @@ class Agent_DQN(Agent):
         # YOUR IMPLEMENTATION HERE #
 
         if torch.cuda.is_available() or torch.backends.mps.is_available():
-            self.num_episodes = 500
+            self.num_episodes = 5000000
         else:
-            self.num_episodes = 500
+            self.num_episodes = 5000000
 
         self.episode_durations = []
         self.episode_rewards = []
@@ -252,6 +261,7 @@ class Agent_DQN(Agent):
             state = self.env.reset()  # Initialize the environment and get its state
             #state = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0).permute(0,3,1,2)
             total_reward = 0
+            episode_loss = 0
 
             #print(state.shape)
             for t in count():
@@ -271,31 +281,37 @@ class Agent_DQN(Agent):
                 tensor_state = torch.tensor(state,dtype=torch.float32, device=self.device).unsqueeze(0).permute(0,3,1,2)
 
                 self.push(tensor_state, tensor_action, next_state, tensor_reward, done)
-                print("exec")
+                #wandb.log({'buffer_size': len(self.memory)})
 
                 # Move to the next state
                 state = observation
 
                 # Perform one step of the optimization (on the policy network)
                 self.optimize_model()
+                #if loss is not None:
+                    #episode_loss += loss
 
                 # Soft update of the target network's weights
                 # θ′ ← τ θ + (1 −τ )θ′
                 target_net_state_dict = self.target_net.state_dict()
                 policy_net_state_dict = self.policy_net.state_dict()
-                for key in policy_net_state_dict:
-                    target_net_state_dict[key] = policy_net_state_dict[key]*self.tau + target_net_state_dict[key]*(1-self.tau)
+                for key in target_net_state_dict:
+                    policy_net_state_dict[key] = target_net_state_dict[key]*self.tau + policy_net_state_dict[key]*(1-self.tau)
                 
-                self.target_net.load_state_dict(target_net_state_dict)
+                self.policy_net.load_state_dict(policy_net_state_dict)
 
                 total_reward += reward
+
+                # Log the average loss after each episode
+                if episode_loss > 0:  # Ensure there was at least one optimization step
+                    avg_episode_loss = episode_loss / (t + 1)
+                    #wandb.log({'loss': avg_episode_loss})
 
                 if done:
                     self.episode_durations.append(t + 1)
                     # plot_durations()
                     break
 
-                torch.save(policy_net_state_dict, 'double_dqn_model.pth')
             
             self.episode_rewards.append(total_reward)
 
@@ -303,6 +319,7 @@ class Agent_DQN(Agent):
                 avg_reward = np.mean(self.episode_rewards[-30:])
                 wandb.log({'average_reward': avg_reward, 'episode': i_episode, 'epsilon': self.epsilon})
 
+        torch.save(target_net_state_dict, 'double_dqn_model.pth')
         wandb.finish() 
 
         

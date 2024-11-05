@@ -1,0 +1,18 @@
+{"time":"2024-10-28T23:24:19.9024159-04:00","level":"INFO","msg":"using version","core version":"0.18.0"}
+{"time":"2024-10-28T23:24:19.9024159-04:00","level":"INFO","msg":"created symlink","path":"C:\\Users\\vshit\\Desktop\\Reinforcement-Learning\\Deep_Q_Learning\\wandb\\run-20241028_232419-1qwhodz5\\logs\\debug-core.log"}
+{"time":"2024-10-28T23:24:19.9040082-04:00","level":"INFO","msg":"using version","core version":"0.18.0"}
+{"time":"2024-10-28T23:24:19.9040082-04:00","level":"INFO","msg":"created symlink","path":"C:\\Users\\vshit\\Desktop\\Reinforcement-Learning\\Deep_Q_Learning\\wandb\\run-20241028_232419-1qwhodz5\\logs\\debug-core.log"}
+{"time":"2024-10-28T23:24:19.9118815-04:00","level":"INFO","msg":"created new stream","id":"1qwhodz5"}
+{"time":"2024-10-28T23:24:19.9118815-04:00","level":"INFO","msg":"stream: started","id":"1qwhodz5"}
+{"time":"2024-10-28T23:24:19.9118815-04:00","level":"INFO","msg":"handler: started","stream_id":{"value":"1qwhodz5"}}
+{"time":"2024-10-28T23:24:19.9118815-04:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"1qwhodz5"}}
+{"time":"2024-10-28T23:24:19.9118815-04:00","level":"INFO","msg":"sender: started","stream_id":{"value":"1qwhodz5"}}
+{"time":"2024-10-28T23:24:20.3691893-04:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-10-28T23:24:20.3806892-04:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-10-28T23:31:57.510684-04:00","level":"INFO","msg":"stream: closing","id":"1qwhodz5"}
+{"time":"2024-10-28T23:31:57.5111904-04:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-10-28T23:31:57.5111904-04:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-10-28T23:31:58.4195045-04:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"1qwhodz5"}}
+{"time":"2024-10-28T23:31:58.4195045-04:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"1qwhodz5"}}
+{"time":"2024-10-28T23:31:58.4195045-04:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"1qwhodz5"}}
+{"time":"2024-10-28T23:31:58.4200108-04:00","level":"INFO","msg":"stream: closed","id":"1qwhodz5"}

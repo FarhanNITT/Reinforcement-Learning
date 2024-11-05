@@ -1,0 +1,34 @@
+Traceback (most recent call last):
+  File "C:\Users\vshit\Desktop\Reinforcement-Learning\Deep_Q_Learning\main.py", line 47, in <module>
+    run(args, record_video=args.record_video)
+  File "C:\Users\vshit\Desktop\Reinforcement-Learning\Deep_Q_Learning\main.py", line 35, in run
+    agent.train()
+  File "C:\Users\vshit\Desktop\Reinforcement-Learning\Deep_Q_Learning\agent_dqn.py", line 315, in train
+    torch.save(target_net_state_dict, '/double_dqn_model.pth')
+  File "C:\Users\vshit\AppData\Local\Programs\Python\Python311\Lib\site-packages\torch\serialization.py", line 651, in save
+    with _open_zipfile_writer(f) as opened_zipfile:
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\vshit\AppData\Local\Programs\Python\Python311\Lib\site-packages\torch\serialization.py", line 525, in _open_zipfile_writer
+    return container(name_or_buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\vshit\AppData\Local\Programs\Python\Python311\Lib\site-packages\torch\serialization.py", line 496, in __init__
+    super().__init__(torch._C.PyTorchFileWriter(self.name))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: File /double_dqn_model.pth cannot be opened.
+Traceback (most recent call last):
+  File "C:\Users\vshit\Desktop\Reinforcement-Learning\Deep_Q_Learning\main.py", line 47, in <module>
+    run(args, record_video=args.record_video)
+  File "C:\Users\vshit\Desktop\Reinforcement-Learning\Deep_Q_Learning\main.py", line 35, in run
+    agent.train()
+  File "C:\Users\vshit\Desktop\Reinforcement-Learning\Deep_Q_Learning\agent_dqn.py", line 315, in train
+    torch.save(target_net_state_dict, '/double_dqn_model.pth')
+  File "C:\Users\vshit\AppData\Local\Programs\Python\Python311\Lib\site-packages\torch\serialization.py", line 651, in save
+    with _open_zipfile_writer(f) as opened_zipfile:
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\vshit\AppData\Local\Programs\Python\Python311\Lib\site-packages\torch\serialization.py", line 525, in _open_zipfile_writer
+    return container(name_or_buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\vshit\AppData\Local\Programs\Python\Python311\Lib\site-packages\torch\serialization.py", line 496, in __init__
+    super().__init__(torch._C.PyTorchFileWriter(self.name))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: File /double_dqn_model.pth cannot be opened.
