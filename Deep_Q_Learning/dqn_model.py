@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import os
+import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
-
-
-# implementing the basic DQN to set things up 
+import torch.optim as optim
+import numpy as np
 
 class DQN(nn.Module):
     """Initialize a deep Q-learning network
@@ -15,11 +16,9 @@ class DQN(nn.Module):
     https://storage.googleapis.com/deepmind-data/assets/papers/DeepMindNature14236Paper.pdf
 
     This is just a hint. You can build your own structure.
-
-
     """
 
-    def __init__(self, in_channels=4, num_actions=4):
+    def __init__(self, args,in_channels=4, num_actions=4):
         """
         Parameters:
         -----------
@@ -34,24 +33,33 @@ class DQN(nn.Module):
         super(DQN, self).__init__()
         ###########################
         # YOUR IMPLEMENTATION HERE #
+        
+        
+        
+        self.conv1 = nn.Conv2d(in_channels, 32, 8, stride=4)
+        self.conv2 = nn.Conv2d(32, 64, 4, stride=2)
+        self.conv3 = nn.Conv2d(64, 64, 3, stride=1)
 
-        # first we implement the paper architecture :
+        fc_input_dims = 3136
+        
+        self.fc1 = nn.Linear(fc_input_dims, 1024)
+        self.fc2 = nn.Linear(1024, 512)
+        self.V = nn.Linear(512, 1)
+        self.A = nn.Linear(512, num_actions)
 
-        # input dimension is 4 x 84 x 84
-        # we can additinally add batch normalization and dropout layers in FC for better training
-
-        self.conv1 = nn.Conv2d(in_channels,32,kernel_size=8,stride=4)  # 32x20x20
-        self.bn1 = nn.BatchNorm2d(32)  # additional 
-        self.conv2 = nn.Conv2d(32,64,kernel_size=4,stride=2)  # 64x9x9
-        self.bn2 = nn.BatchNorm2d(64)
-        self.conv3 = nn.Conv2d(64,64,kernel_size=3,stride=1)  # 64x7x7
-        self.bn3 = nn.BatchNorm2d(64)
-
-        self.fc1 = nn.Linear(64 * 7 * 7, 512)  # fully connected layers
-        self.dropout1 = nn.Dropout(p=0.25)
-        self.fc2 = nn.Linear(512,num_actions)  
-
-
+        self.optimizer = optim.RMSprop(self.parameters(), lr=args.lr)
+        self.loss = nn.SmoothL1Loss()
+        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+        print(self.device)
+        self.to(self.device)
+        
+    def calculate_conv_output_dims(self, input_dims):
+        state = T.zeros(1, *input_dims)
+        dims = self.conv1(state)
+        dims = self.conv2(dims)
+        dims = self.conv3(dims)
+        return int(np.prod(dims.size()))
+        
 
     def forward(self, x):
         """
@@ -59,14 +67,24 @@ class DQN(nn.Module):
         a Tensor of output data. We can use Modules defined in the constructor as
         well as arbitrary operators on Tensors.
         """
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = F.relu(self.bn2(self.conv2(x)))
-        x = F.relu(self.bn3(self.conv3(x)))
+        x=T.div(x,255.0)
+        
+        #print(state[20:,20:,0])
+        #print(state[:,0,:,:])
+        conv1 = F.relu(self.conv1(x))
+        conv2 = F.relu(self.conv2(conv1))
+        conv3 = F.relu(self.conv3(conv2))
+        ###
+        #conv_state = conv3.view(conv3.size()[0], -1)
+        flatten = nn.Flatten(start_dim=1)
+        conv_state = flatten(conv3)
+        flat1 = F.relu(self.fc1(conv_state))
+        flat2 = F.relu(self.fc2(flat1))
 
-        x = x.reshape(x.size(0),-1)
-        x = F.relu(self.fc1(x))
-        x = self.dropout1(x)
-        x = self.fc2(x)
+        V = self.V(flat2)
+        A = self.A(flat2)
 
-
+        return V, A
         return x
+    
+    

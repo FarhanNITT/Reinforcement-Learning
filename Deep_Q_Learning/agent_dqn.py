@@ -2,15 +2,13 @@
 # -*- coding: utf-8 -*-
 import random
 import numpy as np
-from collections import deque, namedtuple
+from collections import deque
 import os
 import sys
 
-import torch
+import torch as T
 import torch.nn.functional as F
 import torch.optim as optim
-from itertools import count
-import wandb
 
 from agent import Agent
 from dqn_model import DQN
@@ -18,11 +16,10 @@ from dqn_model import DQN
 you can import any package and define any extra function as you need
 """
 
-torch.manual_seed(595)
+T.manual_seed(595)
 np.random.seed(595)
 random.seed(595)
 
-wandb.init(project='DeepRLnew', name='Hyperparameters Tuned')
 
 class Agent_DQN(Agent):
     def __init__(self, env, args):
@@ -38,65 +35,40 @@ class Agent_DQN(Agent):
 
         super(Agent_DQN,self).__init__(env)
         ###########################
-        # YOUR IMPLEMENTATION HERE 
-
-        self.env = env      # first lets setup the environmen
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # mode of operation 
-
-    
-         # DQN Hyperparameters
-
-        # to pass as input to model to predict Q valuess
-        self.in_channels = 4  # Input channels for stacked frames (e.g. Atari Breakout)
-        self.num_actions = env.action_space.n  # Number of actions the agent can take
-
-
-        # HYP to tweek with to get best performance - starting with standard values
-
-        self.batch_size = 32
-        self.buffer_size = 1000000
-        self.min_replay_size = 50000
-        self.gamma = 0.99  # Discount factor
-        self.eps_start = 1.0  # Initial epsilon for epsilon-greedy
-        self.eps_end = 0.1  # Final epsilon
-        self.eps_decay = 50000000  # Epsilon decay rate (step_size/this value is decay rate)
-        self.epsilon = self.eps_start 
-        self.lr = 0.0005
-        #self.tau = 0.0005
-        self.TARGET_UPDATE_FREQUENCY = 5000
-        self.eps_decay_start = 400000 #Eps after which epsilon decay starts
-
-        # self.target_update = 10  # Target network update frequency (how frequently to change the target network weights)
+        # YOUR IMPLEMENTATION HERE #
+        self.gamma = args.gamma
+        self.epsilon = args.eps
+        self.lr = args.lr
+        self.n_actions = env.action_space.n
+        self.input_dims = (env.observation_space.shape)
+        self.batch_size = args.batch_size
+        self.eps_min = args.eps_min
+        self.eps_dec = args.eps_dec
+        self.replace_target_cnt = args.replace
+        self.algo = args.algo
+        self.mem_size= args.mem_size
+        self.env_name = args.env_name
+        self.chkpt_dir = args.chkpt_dir
+        self.action_space = [i for i in range(self.n_actions)]
+        self.learn_step_counter = 0
+        self.test = args.test_dqn
+        self.cnt=0
+        
+        self.q_eval_name = 'BreakoutNoFrameskip-v4'+'_'+self.algo+'_q_eval.pth'
+        self.q_next_name = 'BreakoutNoFrameskip-v4'+'_'+self.algo+'_q_next.pth'
+        self.memory = ReplayBuffer(self.mem_size, self.input_dims, self.n_actions)
+        
+        self.q_eval = DQN(args,in_channels=4, num_actions=self.n_actions)
+        self.q_next = DQN(args,in_channels=4, num_actions=self.n_actions)
         
         
-        # Initialize networks
-
-        self.policy_net = DQN(self.in_channels, self.num_actions).to(self.device)  # action selection
-        self.target_net = DQN(self.in_channels, self.num_actions).to(self.device)   # calculating target Q values
-        
-        self.target_net.load_state_dict(self.policy_net.state_dict())   # We want both to have different random weights at first,but for stability no
-        self.target_net.eval()   # In Double DQN, we update both the networks, so we dont want any network set to eval. (Set to eval = no update)
-
-
-        # Replay buffer
-        self.Transition = namedtuple('Transition',
-                        ('state', 'action', 'next_state', 'reward'))
-        self.memory = deque(maxlen=self.buffer_size)   # Check this out for training
-
-        # Adam Optimizer
-        self.optimizer = optim.Adam(self.policy_net.parameters(), self.lr)
-        
-        # Steps and episodes
-        self.steps_done = 0    # counter for actions taken 
-        # self.num_episodes = args.num_episodes    # we can either pass num_episodes as arg or pass directly as variable
-
         if args.test_dqn:
-            # Load your model here if testing
+            #you can load your model here
             print('loading trained model')
-            model_path = 'double_dqn_model.pth'
-            self.policy_net.load_state_dict(torch.load(model_path))
-            self.policy_net.eval()
-            
+            ###########################
+            # YOUR IMPLEMENTATION HERE #
+            self.load_checkpoint(self.q_eval,name=self.q_eval_name)
+            self.load_checkpoint(self.q_next,name=self.q_next_name)
 
     def init_game_setting(self):
         """
@@ -107,12 +79,11 @@ class Agent_DQN(Agent):
         ###########################
         # YOUR IMPLEMENTATION HERE #
         
-
         ###########################
         pass
     
     
-    def make_action(self, observation, eps_no, test=True):
+    def make_action(self, observation, test=True):
         """
         Return predicted action of your agent
         Input:
@@ -124,28 +95,33 @@ class Agent_DQN(Agent):
         """
         ###########################
         # YOUR IMPLEMENTATION HERE #
-        
-        state = torch.tensor(observation, dtype=torch.float32, device=self.device).unsqueeze(0).permute(0,3,1,2).to(self.device)  # current state will be stack of 4 frames - numpy array 84x84x4 -- make tensor and add dimension for batch size
-        
-        
-        # Epsilon-greedy action selection
-        if eps_no > self.eps_decay_start:
+        self.cnt+=1
+        if not self.test:
+            if np.random.random() > self.epsilon:
+                state = np.asarray([observation], dtype=np.float32)
 
-            self.epsilon = max(self.eps_end,self.epsilon-(self.epsilon-self.eps_end)/self.eps_decay)
-            self.steps_done += 1
+                state_tensor = T.FloatTensor(state).to(self.q_eval.device)
+                state_tensor = state_tensor.permute(0,3,1,2)  
+                _, advantages = self.q_eval.forward(state_tensor)
+
+                action = T.argmax(advantages).item()
+            else:
+                action = np.random.choice(self.action_space)       
+                       
         else:
-            self.steps_done += 1
+            state = np.asarray([observation], dtype=np.float32)
 
-        if random.random() > self.epsilon:
-            with torch.no_grad():
-                return self.policy_net(state).max(1)[1].item()   # get the best action from greedy policy
-        else: 
-            return self.env.action_space.sample()
+            state_tensor = T.FloatTensor(state).to(self.q_eval.device) 
+            state_tensor = state_tensor.permute(0,3,1,2) 
+            _, advantages = self.q_eval.forward(state_tensor)
 
+            action = T.argmax(advantages).item()
+        if test:
+            if self.cnt%100==0:
+                action=1
+        return action
     
-    
-
-    def push(self,state,action,next_state,reward,done):
+    def push(self,state, action, reward, state_, done):
         """ You can add additional arguments as you need. 
         Push new data to buffer and remove the old one if the buffer is full.
         
@@ -155,181 +131,136 @@ class Agent_DQN(Agent):
         """
         ###########################
         # YOUR IMPLEMENTATION HERE #
+        self.memory.store_transition(state, action, reward, state_, done)
         
 
-        #self.memory.append((state, action, next_state, reward, done))  # check training function
-        self.memory.append(self.Transition(state, action, next_state, reward))
-
-        ###########################
+        
         
         
     def replay_buffer(self):
         """ You can add additional arguments as you need.
         Select batch from buffer.
         """
-        ###########################
-        # YOUR IMPLEMENTATION HERE #
+        state, action, reward, new_state, done = \
+                                self.memory.sample_buffer(self.batch_size)
         
-        #transitions = random.sample(self.memory, self.batch_size) #(This was sampling a certain transition but it still stays in the buffer)
-
-        #batch_state, batch_action, batch_next_state, batch_reward,batch_done = zip(*transitions)
-
-        if len(self.memory) < self.batch_size:
-            return []  # Not enough transitions to sample
-
-        transitions = []
-        for _ in range(self.batch_size):
-            transitions.append(self.memory.popleft())  # Pop the leftmost transition
-
-        """ batch_state = torch.tensor(batch_state, dtype=torch.float32).to(self.device)"""
-        # batch_action = torch.tensor(batch_action).unsqueeze(1).to(self.device)
-        """ batch_next_state = torch.tensor(batch_next_state, dtype=torch.float32).to(self.device)
-        batch_reward = torch.tensor(batch_reward).to(self.device)
-        batch_done = torch.tensor(batch_done, dtype=torch.float32).to(self.device)
-     """
+        states = T.tensor(state).to(self.q_eval.device)
+        rewards = T.tensor(reward).to(self.q_eval.device)
         
-        return transitions
+        dones = T.tensor(done).to(self.q_eval.device)
+        actions = T.tensor(action).to(self.q_eval.device)
+        states_ = T.tensor(new_state).to(self.q_eval.device)
         
+        return states, actions, rewards, states_, dones
+         
         
-    def optimize_model(self):
-
-        if len(self.memory) < self.min_replay_size:
-            return
-        
-        transitions = self.replay_buffer()
-        # Sample replay buffer
-        #state_batch, action_batch, next_state_batch, reward_batch,done_batch= self.replay_buffer()
-
-        batch = self.Transition(*zip(*transitions))
-
-        """ state_batch = torch.tensor(state_batch).permute(0,3,1,2).to(self.device)
-        
-        state_batch = torch.cat(state_batch)
-        #action_batch = torch.cat(action_batch)
-        reward_batch = torch.cat(reward_batch) """
-
-        non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
-                                          batch.next_state)), device=self.device, dtype=torch.bool)
-
-        #next_state_batch = torch.tensor(next_state_batch)
-        # Convert to tensor with the desired shape
-        non_final_next_states = torch.cat([s for s in batch.next_state if s is not None])
-
-        #print(f"batch action value{batch.action}")
-
-        state_batch = torch.cat(batch.state)
-        action_batch = torch.cat(batch.action)
-        reward_batch = torch.cat(batch.reward)
-
-        #state_batch = state_batch.float()  
-        state_action_values = self.policy_net(state_batch).gather(1, action_batch) #Based on ref
-        
-
-        next_state_values = torch.zeros(self.batch_size, device=self.device)
-        with torch.no_grad():
-            next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1).values #based on ref
-
-        # Compute the expected Q values
-        expected_state_action_values = (next_state_values * self.gamma) + reward_batch
-
-
-
-        # Compute loss (Huber loss)
-        loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))
-
-        # Optimize the model
-        self.optimizer.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
-        self.optimizer.step()
-
-        #return loss.item()
 
     def train(self):
         """
         Implement your training algorithm here
         """
-        ###########################
-        # YOUR IMPLEMENTATION HERE #
+        if self.memory.mem_cntr < self.batch_size:
+            return
 
-        if torch.cuda.is_available() or torch.backends.mps.is_available():
-            self.num_episodes = 5000000
-        else:
-            self.num_episodes = 5000000
+        self.q_eval.optimizer.zero_grad()
 
-        self.episode_durations = []
-        self.episode_rewards = []
-        for i_episode in range(self.num_episodes):
+        self.replace_target_network()
+
+        states, actions, rewards, states_, dones = self.replay_buffer()
+        indices = np.arange(self.batch_size)
+
+        states = states.permute(0,3,1,2)
+        states_ = states_.permute(0,3,1,2)
         
-            state = self.env.reset()  # Initialize the environment and get its state
-            #state = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0).permute(0,3,1,2)
-            total_reward = 0
-            episode_loss = 0
+        V_s, A_s = self.q_eval.forward(states)
+        V_s_, A_s_ = self.q_next.forward(states_)
 
-            #print(state.shape)
-            for t in count():
-                #print(f"Episode number: {t}")
-                action = self.make_action(state,i_episode)
-                #state = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0).permute(0,3,1,2)
-                observation, reward, terminated, truncated, _ = self.env.step(action)
-                done = terminated or truncated
+        V_s_eval, A_s_eval = self.q_eval.forward(states_)
 
-                if terminated:
-                    next_state = None
-                else:
-                    next_state = torch.tensor(observation, dtype=torch.float32, device=self.device).unsqueeze(0).permute(0,3,1,2)
+        q_pred = T.add(V_s,
+                        (A_s - A_s.mean(dim=1, keepdim=True)))[indices, actions]
 
-                tensor_action = torch.tensor([action], dtype=torch.int64, device=self.device).unsqueeze(1)
-                tensor_reward = torch.tensor([reward],dtype=torch.float32, device=self.device)
-                tensor_state = torch.tensor(state,dtype=torch.float32, device=self.device).unsqueeze(0).permute(0,3,1,2)
+        q_next = T.add(V_s_, (A_s_ - A_s_.mean(dim=1, keepdim=True)))
 
-                self.push(tensor_state, tensor_action, next_state, tensor_reward, done)
-                #wandb.log({'buffer_size': len(self.memory)})
+        q_eval = T.add(V_s_eval, (A_s_eval - A_s_eval.mean(dim=1,keepdim=True)))
 
-                # Move to the next state
-                state = observation
+        max_actions = T.argmax(q_eval, dim=1)
+        q_next[dones] = 0.0
 
-                # Perform one step of the optimization (on the policy network)
-                self.optimize_model()
-                #if loss is not None:
-                    #episode_loss += loss
+        q_target = rewards + self.gamma*q_next[indices, max_actions]
 
-                # Soft update of the target network's weights
-                # θ′ ← τ θ + (1 −τ )θ′
-                """ target_net_state_dict = self.target_net.state_dict()
-                policy_net_state_dict = self.policy_net.state_dict()
-                for key in policy_net_state_dict:
-                    target_net_state_dict[key] = policy_net_state_dict[key]*self.tau + target_net_state_dict[key]*(1-self.tau)
-                
-                self.target_net.load_state_dict(target_net_state_dict) """
+        loss = self.q_eval.loss(q_target, q_pred).to(self.q_eval.device)
+        loss.backward()
+        self.q_eval.optimizer.step()
+        self.learn_step_counter += 1
 
-                #Update Target net every target_update_freq iters
-                if i_episode % self.TARGET_UPDATE_FREQUENCY == 0:
-                    self.target_net.load_state_dict(self.policy_net.state_dict())
-
-                policy_net_state_dict = self.policy_net.state_dict()
-
-                total_reward += reward
-
-                # Log the average loss after each episode
-                if episode_loss > 0:  # Ensure there was at least one optimization step
-                    avg_episode_loss = episode_loss / (t + 1)
-                    #wandb.log({'loss': avg_episode_loss})
-
-                if done:
-                    self.episode_durations.append(t + 1)
-                    # plot_durations()
-                    break
-
-            
-            self.episode_rewards.append(total_reward)
-
-            if len(self.episode_rewards) >= 30:
-                avg_reward = np.mean(self.episode_rewards[-30:])
-                wandb.log({'average_reward': avg_reward, 'episode': i_episode, 'epsilon': self.epsilon})
-
-        torch.save(policy_net_state_dict, 'double_dqn_model.pth')
-        wandb.finish() 
-
+        self.decrement_epsilon()
         
-        ###########################
+    def load_models(self):
+        self.load_checkpoint(self.q_eval,name=self.q_eval_name)
+        self.load_checkpoint(self.q_next,name=self.q_next_name)
+        
+    def save_models(self):
+        self.save_checkpoint(self.q_eval,name=self.q_eval_name)
+        self.save_checkpoint(self.q_next,name=self.q_next_name)
+        
+    def save_checkpoint(self,model,name):
+        print('... saving checkpoint ...')
+        checkpoint_file = os.path.join(self.chkpt_dir, name)
+        T.save(model.state_dict(), checkpoint_file)
+        T.save({            
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': model.optimizer.state_dict()
+
+            }, checkpoint_file)
+
+    def load_checkpoint(self,model,name):
+        print('... loading checkpoint ...')
+        checkpoint_file = os.path.join(self.chkpt_dir, name)
+        model.load_state_dict(T.load(checkpoint_file)['model_state_dict'])
+        model.optimizer.load_state_dict(T.load(checkpoint_file)['optimizer_state_dict'])        
+    
+    def replace_target_network(self):
+        if self.replace_target_cnt is not None and \
+           self.learn_step_counter % self.replace_target_cnt == 0:
+            self.q_next.load_state_dict(self.q_eval.state_dict())
+
+    def decrement_epsilon(self):
+        self.epsilon = self.epsilon - self.eps_dec \
+                           if self.epsilon > self.eps_min else self.eps_min
+        
+class ReplayBuffer(object):
+    def __init__(self, max_size, input_shape, n_actions):
+        self.mem_size = max_size
+        self.mem_cntr = 0
+        self.state_memory = np.zeros((self.mem_size, *input_shape),
+                                     dtype=np.uint8)
+        self.new_state_memory = np.zeros((self.mem_size, *input_shape),
+                                         dtype=np.uint8)
+
+        self.action_memory = np.zeros(self.mem_size, dtype=np.int64)
+        self.reward_memory = np.zeros(self.mem_size, dtype=np.float32)
+        self.terminal_memory = np.zeros(self.mem_size, dtype=np.bool)
+
+    def store_transition(self, state, action, reward, state_, done):
+        index = self.mem_cntr % self.mem_size
+        self.state_memory[index] = state
+        self.new_state_memory[index] = state_
+        self.action_memory[index] = action
+        self.reward_memory[index] = reward
+        self.terminal_memory[index] = done
+        self.mem_cntr += 1
+
+    def sample_buffer(self, batch_size):
+        max_mem = min(self.mem_cntr, self.mem_size)
+        batch = np.random.choice(max_mem, batch_size, replace=False)
+
+        states = self.state_memory[batch]
+        actions = self.action_memory[batch]
+        rewards = self.reward_memory[batch]
+        states_ = self.new_state_memory[batch]
+        terminal = self.terminal_memory[batch]
+        
+
+        return states, actions, rewards, states_, terminal
+    
