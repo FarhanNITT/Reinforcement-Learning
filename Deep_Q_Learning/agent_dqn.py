@@ -22,7 +22,7 @@ torch.manual_seed(595)
 np.random.seed(595)
 random.seed(595)
 
-wandb.init(project='DeepRL', name='DQN lr changed')
+wandb.init(project='DeepRL', name='Without batch norm simple dqn')
 
 class Agent_DQN(Agent):
     def __init__(self, env, args):
@@ -54,6 +54,8 @@ class Agent_DQN(Agent):
         # HYP to tweek with to get best performance - starting with standard values
 
         self.batch_size = 32
+        self.buffer_size = 50000
+        self.min_replay_size = 5000
         self.gamma = 0.99  # Discount factor
         self.eps_start = 1.0  # Initial epsilon for epsilon-greedy
         self.eps_end = 0.1  # Final epsilon
@@ -61,7 +63,7 @@ class Agent_DQN(Agent):
         self.epsilon = self.eps_start 
         self.lr = 0.001
         self.tau = 0.0005
-        self.eps_decay_start = 300000 #Eps after which epsilon decay starts
+        self.eps_decay_start = 400000 #Eps after which epsilon decay starts
 
         # self.target_update = 10  # Target network update frequency (how frequently to change the target network weights)
         
@@ -71,14 +73,14 @@ class Agent_DQN(Agent):
         self.policy_net = DQN(self.in_channels, self.num_actions).to(self.device)  # action selection
         self.target_net = DQN(self.in_channels, self.num_actions).to(self.device)   # calculating target Q values
         
-        #self.target_net.load_state_dict(self.policy_net.state_dict())   # We want both to have different random weights at first,but for stability no
-        #self.target_net.eval()   # In Double DQN, we update both the networks, so we dont want any network set to eval. (Set to eval = no update)
+        self.target_net.load_state_dict(self.policy_net.state_dict())   # We want both to have different random weights at first,but for stability no
+        self.target_net.eval()   # In Double DQN, we update both the networks, so we dont want any network set to eval. (Set to eval = no update)
 
 
         # Replay buffer
         self.Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
-        self.memory = deque(maxlen=10000)   # Check this out for training
+        self.memory = deque(maxlen=self.buffer_size)   # Check this out for training
 
         # Adam Optimizer
         self.optimizer = optim.Adam(self.policy_net.parameters(), self.lr)
@@ -190,7 +192,7 @@ class Agent_DQN(Agent):
         
     def optimize_model(self):
 
-        if len(self.memory) < 5000:
+        if len(self.memory) < self.min_replay_size:
             return
         
         transitions = self.replay_buffer()
@@ -219,12 +221,12 @@ class Agent_DQN(Agent):
         reward_batch = torch.cat(batch.reward)
 
         #state_batch = state_batch.float()  
-        state_action_values = self.target_net(state_batch).gather(1, action_batch) #target net does the value updates
+        state_action_values = self.policy_net(state_batch).gather(1, action_batch) #Based on ref
         
 
         next_state_values = torch.zeros(self.batch_size, device=self.device)
         with torch.no_grad():
-            next_state_values[non_final_mask] = self.policy_net(non_final_next_states).max(1).values #Policy net selects actions
+            next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1).values #based on ref
 
         # Compute the expected Q values
         expected_state_action_values = (next_state_values * self.gamma) + reward_batch
@@ -237,7 +239,7 @@ class Agent_DQN(Agent):
         # Optimize the model
         self.optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_value_(self.target_net.parameters(), 100)
+        torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
         self.optimizer.step()
 
         #return loss.item()
@@ -295,10 +297,10 @@ class Agent_DQN(Agent):
                 # θ′ ← τ θ + (1 −τ )θ′
                 target_net_state_dict = self.target_net.state_dict()
                 policy_net_state_dict = self.policy_net.state_dict()
-                for key in target_net_state_dict:
-                    policy_net_state_dict[key] = target_net_state_dict[key]*self.tau + policy_net_state_dict[key]*(1-self.tau)
+                for key in policy_net_state_dict:
+                    target_net_state_dict[key] = policy_net_state_dict[key]*self.tau + target_net_state_dict[key]*(1-self.tau)
                 
-                self.policy_net.load_state_dict(policy_net_state_dict)
+                self.target_net.load_state_dict(target_net_state_dict)
 
                 total_reward += reward
 
@@ -319,7 +321,7 @@ class Agent_DQN(Agent):
                 avg_reward = np.mean(self.episode_rewards[-30:])
                 wandb.log({'average_reward': avg_reward, 'episode': i_episode, 'epsilon': self.epsilon})
 
-        torch.save(target_net_state_dict, 'double_dqn_model.pth')
+        torch.save(policy_net_state_dict, 'double_dqn_model.pth')
         wandb.finish() 
 
         
