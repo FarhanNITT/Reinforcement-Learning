@@ -22,7 +22,7 @@ torch.manual_seed(595)
 np.random.seed(595)
 random.seed(595)
 
-wandb.init(project='DeepRL', name='Without batch norm simple dqn')
+wandb.init(project='DeepRLnew', name='Hyperparameters Tuned')
 
 class Agent_DQN(Agent):
     def __init__(self, env, args):
@@ -54,15 +54,16 @@ class Agent_DQN(Agent):
         # HYP to tweek with to get best performance - starting with standard values
 
         self.batch_size = 32
-        self.buffer_size = 50000
-        self.min_replay_size = 5000
+        self.buffer_size = 1000000
+        self.min_replay_size = 50000
         self.gamma = 0.99  # Discount factor
         self.eps_start = 1.0  # Initial epsilon for epsilon-greedy
         self.eps_end = 0.1  # Final epsilon
         self.eps_decay = 50000000  # Epsilon decay rate (step_size/this value is decay rate)
         self.epsilon = self.eps_start 
-        self.lr = 0.001
-        self.tau = 0.0005
+        self.lr = 0.0005
+        #self.tau = 0.0005
+        self.TARGET_UPDATE_FREQUENCY = 5000
         self.eps_decay_start = 400000 #Eps after which epsilon decay starts
 
         # self.target_update = 10  # Target network update frequency (how frequently to change the target network weights)
@@ -295,12 +296,18 @@ class Agent_DQN(Agent):
 
                 # Soft update of the target network's weights
                 # θ′ ← τ θ + (1 −τ )θ′
-                target_net_state_dict = self.target_net.state_dict()
+                """ target_net_state_dict = self.target_net.state_dict()
                 policy_net_state_dict = self.policy_net.state_dict()
                 for key in policy_net_state_dict:
                     target_net_state_dict[key] = policy_net_state_dict[key]*self.tau + target_net_state_dict[key]*(1-self.tau)
                 
-                self.target_net.load_state_dict(target_net_state_dict)
+                self.target_net.load_state_dict(target_net_state_dict) """
+
+                #Update Target net every target_update_freq iters
+                if i_episode % self.TARGET_UPDATE_FREQUENCY == 0:
+                    self.target_net.load_state_dict(self.policy_net.state_dict())
+
+                policy_net_state_dict = self.policy_net.state_dict()
 
                 total_reward += reward
 

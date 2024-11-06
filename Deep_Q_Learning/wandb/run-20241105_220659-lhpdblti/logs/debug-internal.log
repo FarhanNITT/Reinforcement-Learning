@@ -1,0 +1,18 @@
+{"time":"2024-11-05T22:06:59.6176902-05:00","level":"INFO","msg":"using version","core version":"0.18.0"}
+{"time":"2024-11-05T22:06:59.6176902-05:00","level":"INFO","msg":"created symlink","path":"C:\\Users\\vshit\\Desktop\\Reinforcement-Learning\\Deep_Q_Learning\\wandb\\run-20241105_220659-lhpdblti\\logs\\debug-core.log"}
+{"time":"2024-11-05T22:06:59.6187331-05:00","level":"INFO","msg":"using version","core version":"0.18.0"}
+{"time":"2024-11-05T22:06:59.6187331-05:00","level":"INFO","msg":"created symlink","path":"C:\\Users\\vshit\\Desktop\\Reinforcement-Learning\\Deep_Q_Learning\\wandb\\run-20241105_220659-lhpdblti\\logs\\debug-core.log"}
+{"time":"2024-11-05T22:06:59.6297325-05:00","level":"INFO","msg":"created new stream","id":"lhpdblti"}
+{"time":"2024-11-05T22:06:59.6302548-05:00","level":"INFO","msg":"stream: started","id":"lhpdblti"}
+{"time":"2024-11-05T22:06:59.6302548-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"lhpdblti"}}
+{"time":"2024-11-05T22:06:59.6302548-05:00","level":"INFO","msg":"sender: started","stream_id":{"value":"lhpdblti"}}
+{"time":"2024-11-05T22:06:59.6302548-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"lhpdblti"}}
+{"time":"2024-11-05T22:07:00.0392677-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-11-05T22:07:00.0460367-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-05T22:08:11.9198325-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-05T22:08:11.9198325-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-05T22:08:15.0026493-05:00","level":"INFO","msg":"stream: closing","id":"lhpdblti"}
+{"time":"2024-11-05T22:08:15.0026493-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"lhpdblti"}}
+{"time":"2024-11-05T22:08:15.0026493-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"lhpdblti"}}
+{"time":"2024-11-05T22:08:15.0026493-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"lhpdblti"}}
+{"time":"2024-11-05T22:08:15.0026493-05:00","level":"INFO","msg":"stream: closed","id":"lhpdblti"}
