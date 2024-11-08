@@ -41,14 +41,14 @@ class DQN(nn.Module):
         # we can additinally add batch normalization and dropout layers in FC for better training
 
         self.conv1 = nn.Conv2d(in_channels,32,kernel_size=8,stride=4)  # 32x20x20
-        self.bn1 = nn.BatchNorm2d(32)  # additional 
+        #self.bn1 = nn.BatchNorm2d(32)  # additional 
         self.conv2 = nn.Conv2d(32,64,kernel_size=4,stride=2)  # 64x9x9
-        self.bn2 = nn.BatchNorm2d(64)
+        #self.bn2 = nn.BatchNorm2d(64)
         self.conv3 = nn.Conv2d(64,64,kernel_size=3,stride=1)  # 64x7x7
-        self.bn3 = nn.BatchNorm2d(64)
+        #self.bn3 = nn.BatchNorm2d(64)
 
         self.fc1 = nn.Linear(64 * 7 * 7, 512)  # fully connected layers
-        self.dropout1 = nn.Dropout(p=0.25)
+        #self.dropout1 = nn.Dropout(p=0.25)
         self.fc2 = nn.Linear(512,num_actions)  
 
 
@@ -59,13 +59,13 @@ class DQN(nn.Module):
         a Tensor of output data. We can use Modules defined in the constructor as
         well as arbitrary operators on Tensors.
         """
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = F.relu(self.bn2(self.conv2(x)))
-        x = F.relu(self.bn3(self.conv3(x)))
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
 
         x = x.reshape(x.size(0),-1)
         x = F.relu(self.fc1(x))
-        x = self.dropout1(x)
+        #x = self.dropout1(x)
         x = self.fc2(x)
 
 
