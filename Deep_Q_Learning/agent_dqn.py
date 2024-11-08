@@ -54,14 +54,14 @@ class Agent_DQN(Agent):
         # HYP to tweek with to get best performance - starting with standard values
 
         self.batch_size = 32
-        self.buffer_size = 1000000
+        self.buffer_size = 100000
         self.min_replay_size = 50000
         self.gamma = 0.99  # Discount factor
         self.eps_start = 1.0  # Initial epsilon for epsilon-greedy
         self.eps_end = 0.1  # Final epsilon
         self.eps_decay = 50000000  # Epsilon decay rate (step_size/this value is decay rate)
         self.epsilon = self.eps_start 
-        self.lr = 0.0005
+        self.lr = 0.00015
         #self.tau = 0.0005
         self.TARGET_UPDATE_FREQUENCY = 5000
         self.eps_decay_start = 400000 #Eps after which epsilon decay starts
@@ -93,7 +93,7 @@ class Agent_DQN(Agent):
         if args.test_dqn:
             # Load your model here if testing
             print('loading trained model')
-            model_path = 'double_dqn_model.pth'
+            model_path = 'breakout_model.pth'
             self.policy_net.load_state_dict(torch.load(model_path))
             self.policy_net.eval()
             
@@ -328,8 +328,7 @@ class Agent_DQN(Agent):
                 avg_reward = np.mean(self.episode_rewards[-30:])
                 wandb.log({'average_reward': avg_reward, 'episode': i_episode, 'epsilon': self.epsilon})
 
-        torch.save(policy_net_state_dict, 'double_dqn_model.pth')
-        wandb.finish() 
+            if i_episode % 1e6 == 0:
+                torch.save(policy_net_state_dict, 'double_dqn_model.pth')
 
-        
-        ###########################
+        wandb.finish() 
