@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import wandb
 import csv
+import time
 
 wandb.init(project='DeepRLnew', name='Reference Code Dueling')
 
@@ -13,6 +14,7 @@ def parse():
     parser.add_argument('--env_name', default=None, help='environment name')
     parser.add_argument('--train_dqn', action='store_true', help='whether train DQN')
     parser.add_argument('--test_dqn', action='store_true', help='whether test DQN')
+    parser.add_argument('--record_video', action='store_true', help='whether to record video during testing')
     try:
         from argument import add_arguments
         parser = add_arguments(parser)
@@ -23,7 +25,8 @@ def parse():
     return args
 
 
-def run(args):
+def run(args, record_video=False):
+    start_time = time.time()
     if args.train_dqn:
         
         env_name ='BreakoutNoFrameskip-v4'
@@ -100,7 +103,7 @@ def run(args):
                 'epsilon %.2f' % agent.epsilon, 'steps', n_steps)
             
             if len(steps_array) % 30 == 0:
-                wandb.log({'average_score': avg_score, 'episode': i, 'epsilon': agent.epsilon})
+                wandb.log({'average_score': avg_score, 'episode': i, 'best score': best_score})
 
             if avg_score > best_score:                
                 agent.save_models()
@@ -121,12 +124,17 @@ def run(args):
                     idx_l = len(stat)
 
     if args.test_dqn:
-        env = Environment('BreakoutNoFrameskip-v4', args, atari_wrapper=True, test=True)
+        render_mode_value = "rgb_array" if record_video else None
+        env = Environment('BreakoutNoFrameskip-v4', args, atari_wrapper=True, test=True, render_mode=render_mode_value)
         from agent_dqn import Agent_DQN
         agent = Agent_DQN(env, args)
-        test(agent, env, total_episodes=100)
+        test(agent, env, total_episodes=100, record_video=record_video)
+        print('running time:',time.time()-start_time)
+
+    wandb.finish() 
+    
 
 
 if __name__ == '__main__':
     args = parse()
-    run(args)
+    run(args, record_video=args.record_video)
