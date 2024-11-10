@@ -22,7 +22,7 @@ torch.manual_seed(595)
 np.random.seed(595)
 random.seed(595)
 
-wandb.init(project='DeepRLnew', name='Hyperparameters Tuned')
+wandb.init(project='Duelling_DDQN', name='Finalrun')
 
 class Agent_DQN(Agent):
     def __init__(self, env, args):
